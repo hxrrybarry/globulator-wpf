@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="globulator_icon7.png" />
     <None Remove="test.png" />
   </ItemGroup>
 
@@ -53,6 +54,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="globulator_icon7.png" />
     <Resource Include="test.png" />
   </ItemGroup>
 

@@ -193,4 +193,9 @@ public partial class MainWindow : Window
     {
         sendButton.IsDefault = false;
     }
+
+    private void consoleOutput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+
+    }
 }

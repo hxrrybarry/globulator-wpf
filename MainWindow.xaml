@@ -6,15 +6,20 @@
         xmlns:local="clr-namespace:globulator"
         mc:Ignorable="d"
         Title="Globulator" Height="700" Width="1390" WindowStyle="ToolWindow">
-    <Grid x:Name="Main" Background="#FF2B2A33" Margin="0,0,0,-6">
+    <Grid x:Name="Main" Background="#FF2B2A33">
         <Grid.RowDefinitions>
-            <RowDefinition Height="649*"/>
-            <RowDefinition Height="4*"/>
+            <RowDefinition Height="625*"/>
+            <RowDefinition Height="59*"/>
         </Grid.RowDefinitions>
-        <Image x:Name="pictureBox" Height="601" Margin="768,12,30,72" Width="592" Visibility="Visible"/>
-        <TextBox x:Name="commandBox" HorizontalAlignment="Left" Margin="10,625,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="679" Foreground="MistyRose" Background="#FF4B4959" AutomationProperties.HelpText="Command.." TextChanged="TextBox_TextChanged"/>
-        <Button x:Name="sendButton" Content="Send &gt;&gt;" HorizontalAlignment="Left" Margin="694,625,0,0" VerticalAlignment="Top" Width="59" Height="18" Click="sendButton_Click"/>
-        <RichTextBox x:Name="consoleOutput" Margin="10,10,0,0" MinWidth="0" HorizontalAlignment="Left" VerticalAlignment="Top" Height="606" Width="743" Background="#FF1C1B22" Foreground="MistyRose" IsReadOnly="True" FontFamily="Cascadia Code">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="680*" />
+            <ColumnDefinition Width="73*"/>
+            <ColumnDefinition Width="637*" />
+        </Grid.ColumnDefinitions>
+        <Image x:Name="pictureBox" Margin="13,12,11,0" Visibility="Visible" Grid.Column="2"/>
+        <TextBox x:Name="commandBox" Margin="10,7,7,28" TextWrapping="Wrap" Foreground="MistyRose" Background="#FF4B4959" AutomationProperties.HelpText="Command.." TextChanged="TextBox_TextChanged" Grid.Row="1"/>
+        <Button x:Name="sendButton" Content="Send &gt;&gt;" Click="sendButton_Click" Margin="1,7,5,28" Grid.Row="1" RenderTransformOrigin="-0.004,0.51" Grid.Column="1"/>
+        <RichTextBox x:Name="consoleOutput" MinWidth="0" Background="#FF1C1B22" Foreground="MistyRose" IsReadOnly="True" FontFamily="Cascadia Code" TextChanged="consoleOutput_TextChanged" Margin="10,10,3,0" Grid.ColumnSpan="2">
             <RichTextBox.RenderTransform>
                 <MatrixTransform/>
             </RichTextBox.RenderTransform>
@@ -24,8 +29,8 @@
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <UserControl Loaded="UserControl_Loaded" Margin="0,0,1334,620"/>
-        <RichTextBox x:Name="viewingBox" Margin="763,10,0,0" MinWidth="0" HorizontalAlignment="Left" VerticalAlignment="Top" Height="606" Width="592" Background="#FF1C1B22" Foreground="MistyRose" TextChanged="viewingBox_TextChanged" FontFamily="Cascadia Code">
+        <UserControl Loaded="UserControl_Loaded" Margin="0,0,680,342"/>
+        <RichTextBox x:Name="viewingBox" Margin="10,10,10,0" MinWidth="0" Background="#FF1C1B22" Foreground="MistyRose" TextChanged="viewingBox_TextChanged" FontFamily="Cascadia Code" Grid.Column="2">
             <RichTextBox.RenderTransform>
                 <MatrixTransform/>
             </RichTextBox.RenderTransform>
@@ -35,6 +40,6 @@
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Label x:Name="viewedFilePath" Content="&lt;filePath&gt;" HorizontalAlignment="Left" Margin="763,621,0,0" VerticalAlignment="Top" Foreground="MistyRose" FontFamily="Cascadia Code"/>
+        <Label x:Name="viewedFilePath" Content="&lt;filePath&gt;" Foreground="MistyRose" FontFamily="Cascadia Code" Grid.Column="2" Margin="10,7,10,28" Grid.Row="1"/>
     </Grid>
 </Window>

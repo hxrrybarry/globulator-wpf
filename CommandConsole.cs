@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Documents;
 using Color = System.Windows.Media.Color;
 using WpfAnimatedGif;
+using System.Windows.Media;
 
 namespace globulator;
 
@@ -23,7 +24,7 @@ public class CommandConsole()
 
     private string Password = "";
     public string CurrentDirectory = json.Value<string>("defaultdir");
-    public string[] AllFilesInCurrentPath = Directory.GetFiles(json.Value<string>("defaultdir"));
+    public string[] AllFilesInCurrentPath = Directory.GetFiles(json.Value<string>("defaultdir")).Where(c => !c.EndsWith("glob")).ToArray();
 
     public bool isMuted = json.Value<bool>("mute");
 
@@ -104,6 +105,7 @@ public class CommandConsole()
                 "sl" => SelectFile(args[1..]),
                 "commit" => WriteToSelectedFile(fileDetails),
                 "togglemute" => ToggleMute(),
+                "setbg" => SetBackgroundImage(args[1..]),
                 _ => CommandNotFoundError(args[0])
             };
         } catch (IndexOutOfRangeException) {
@@ -116,6 +118,33 @@ public class CommandConsole()
     {
         string output = string.Join(' ', message);
         return (output, Color.FromRgb(255, 228, 225));
+    }
+
+    
+
+    private (string, Color) SetBackgroundImage(string[] path)
+    {
+        string? stringPath = string.Join(' ', path);
+        stringPath = ParseDirectoryRequest(stringPath);
+
+        if (stringPath is null || !FileWrapper.FileIsImage(stringPath))
+            return ($"Image '{stringPath}' does not exist!", Color.FromRgb(205, 0, 26));
+
+        Window parentWindow = Application.Current.MainWindow;
+        Grid mainGrid = (Grid)parentWindow.FindName("Main");
+
+        ImageBrush imageBrush = new();
+
+        BitmapImage im = new();
+        im.BeginInit();
+        im.UriSource = new Uri(stringPath);
+        im.EndInit();
+
+        imageBrush.ImageSource = im;
+
+        mainGrid.Background = imageBrush;
+
+        return ($"Set image background to '{stringPath}'.", Color.FromRgb(0, 155, 119));
     }
 
     private (string, Color) ToggleMute()
@@ -161,7 +190,8 @@ public class CommandConsole()
             { "ver", " - Displays current software version." },
             { "sl", " <file> - Selects <file> for viewing / editing on the side. Use F11 and F12 to scroll through each file." },
             { "commit", " - Writes changes from selected file." },
-            { "togglemute", " - Toggles mute." }
+            { "togglemute", " - Toggles mute." },
+            { "setbg", " <file> - Sets current background image to <file>." }
         };
 
         // checks if user is requesting help for specific command
@@ -276,7 +306,7 @@ public class CommandConsole()
             if (fileName != "*")
             {
                 // acquire file by file name
-                FileWrapper file = CurrentGlobContents.FirstOrDefault(file => file.FileName == fileName);
+                FileWrapper? file = CurrentGlobContents.FirstOrDefault(file => file.FileName == fileName);
 
                 if (file is null)
                     return ($"File '{fileName}' does not exist in glob '{glob}'!", Color.FromRgb(205, 0, 26));
@@ -326,7 +356,8 @@ public class CommandConsole()
             globName = CurrentGlobName;
         }
 
-        if (File.Exists(filePath) && File.Exists(globPath))
+        // null indicates file wasn't found
+        if (filePath is not null && File.Exists(globPath))
         {
             // refer to previous
             string json = Encoding.ASCII.GetString(ByteCipher.XOR(Unzip(File.ReadAllBytes(CurrentGlobPath)), Password));
@@ -476,9 +507,12 @@ public class CommandConsole()
     {
         string? stringPath = ParseDirectoryRequest(string.Join(' ', path));
 
+
         if (stringPath is null)
             return ($"File '{string.Join(' ', path)}' does not exist!", Color.FromRgb(205, 0, 26));
 
+        if (stringPath.EndsWith("glob"))
+            return ("Cannot view glob files!", Color.FromRgb(205, 0, 26));
 
         Window parentWindow = Application.Current.MainWindow;
         RichTextBox viewingBox = (RichTextBox)parentWindow.FindName("viewingBox");
@@ -487,7 +521,7 @@ public class CommandConsole()
 
         pathLabel.Content = stringPath;
 
-        if (stringPath.EndsWith("png") || stringPath.EndsWith("jpg") || stringPath.EndsWith("jpeg") || stringPath.EndsWith("bmp") || stringPath.EndsWith("gif"))
+        if (FileWrapper.FileIsImage(stringPath))
         {
             viewingImage.Visibility = Visibility.Visible;
             viewingBox.Visibility = Visibility.Hidden;
@@ -522,7 +556,7 @@ public class CommandConsole()
 
     private static (string, Color) WriteToSelectedFile((string, string) fileDetails)
     {
-        if (fileDetails.Item2.EndsWith("png") || fileDetails.Item2.EndsWith("jpg") || fileDetails.Item2.EndsWith("jpeg") || fileDetails.Item2.EndsWith("bmp") || fileDetails.Item2.EndsWith("gif") || fileDetails.Item2.EndsWith("glob"))
+        if (FileWrapper.FileIsImage(fileDetails.Item2))
             return ("Selected file is not a text file!", Color.FromRgb(205, 0, 26));
 
         File.WriteAllText(fileDetails.Item2, fileDetails.Item1);

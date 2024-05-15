@@ -13,6 +13,8 @@ using WMPLib;
 using static System.Net.Mime.MediaTypeNames;
 using WpfAnimatedGif;
 using Color = System.Windows.Media.Color;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace globulator;
 
@@ -101,7 +103,7 @@ public partial class MainWindow : Window
         consoleOutput.ScrollToEnd();
 
         sendButton.IsDefault = false;
-        console.AllFilesInCurrentPath = Directory.GetFiles(console.CurrentDirectory);
+        console.AllFilesInCurrentPath = Directory.GetFiles(console.CurrentDirectory).Where(c => !c.EndsWith("glob")).ToArray();
     }
 
     public void AppendTextToConsole((string, Color) text)
@@ -109,6 +111,21 @@ public partial class MainWindow : Window
         TextRange tr = new(consoleOutput.Document.ContentEnd, consoleOutput.Document.ContentEnd)
         {
             Text = text.Item1
+        };
+
+        try
+        {
+            tr.ApplyPropertyValue(TextElement.ForegroundProperty,
+                new SolidColorBrush(text.Item2));
+        }
+        catch (FormatException) { }
+    }
+
+    public void AppendTextToViewingBox((string, Color) text)
+    {
+        TextRange tr = new(viewingBox.Document.ContentEnd, viewingBox.Document.ContentEnd)
+        {
+            Text = Regex.Replace(text.Item1, @" {4,}|[ \t]*\t[ \t]*", "\t")
         };
 
         try
@@ -141,7 +158,7 @@ public partial class MainWindow : Window
             {
                 string path = console.AllFilesInCurrentPath[fileIndex];
                 viewedFilePath.Content = path;
-                if (path.EndsWith("png") || path.EndsWith("jpg") || path.EndsWith("jpeg") || path.EndsWith("bmp") || path.EndsWith("gif"))
+                if (FileWrapper.FileIsImage(path))
                 {
                     pictureBox.Visibility = Visibility.Visible;
                     viewingBox.Visibility = Visibility.Hidden;
@@ -161,14 +178,30 @@ public partial class MainWindow : Window
 
                     FlowDocument textDoc = new();
 
-                    Run textRun = new(File.ReadAllText(path));
+                    string fileText = File.ReadAllText(path);
 
-                    Paragraph text = new();
-                    text.Inlines.Add(textRun);
+                    if (path.EndsWith("json"))
+                    {
+                        (string, Color)[] highlightedJSON = SyntaxHighlighter.HighlightJSONString(fileText);
 
-                    textDoc.Blocks.Add(text);
+                        foreach ((string, Color) highlightedText in highlightedJSON)
+                        {
+                            AppendTextToViewingBox(highlightedText);
+                            // viewingBox.AppendText("\r");
+                        }
+                            
+                    }
+                    else
+                    {
+                        Run textRun = new(fileText);
 
-                    viewingBox.Document = textDoc;
+                        Paragraph text = new();
+                        text.Inlines.Add(textRun);
+
+                        textDoc.Blocks.Add(text);
+
+                        viewingBox.Document = textDoc;
+                    }                   
                 }
                     
             }

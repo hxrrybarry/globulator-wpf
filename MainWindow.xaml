@@ -13,7 +13,7 @@
                 <VisualBrush.Visual>
                     <Image
                         Stretch="UniformToFill"
-                        gif:ImageBehavior.AnimatedSource="C:\Users\HarrisonO’Leary\Downloads\pixel-jeff-galaxy-far-far-away-2416418660.gif"
+                        gif:ImageBehavior.AnimatedSource="C:\Users\harib\source\repos\globulator\bin\Debug\net8.0-windows\bg\background.gif"
                         gif:ImageBehavior.AutoStart="True"
                         gif:ImageBehavior.RepeatBehavior="1"/>
                 </VisualBrush.Visual>
@@ -55,6 +55,7 @@
             </FlowDocument>
         </RichTextBox>
         <Label x:Name="viewedFilePath" Content="&lt;filePath&gt;" Foreground="MistyRose" FontFamily="Cascadia Code" Grid.Column="3" Margin="10,7,10,0" Grid.Row="2"/>
+        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1"/>
     </Grid>
     <WindowChrome.WindowChrome>
         <WindowChrome/>

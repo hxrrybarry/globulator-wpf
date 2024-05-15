@@ -11,12 +11,13 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Documents;
 using Color = System.Windows.Media.Color;
+using WpfAnimatedGif;
 
 namespace globulator;
 
 public class CommandConsole()
 {
-    private const string VERSION = "b1.0.1";
+    private const string VERSION = "Poly Use Linked Storage and Text Editor version: b1.1.1";
 
     readonly static JObject json = JObject.Parse(File.ReadAllText("config.json"));
 
@@ -496,7 +497,7 @@ public class CommandConsole()
             im.UriSource = new Uri(stringPath);
             im.EndInit();
 
-            viewingImage.Source = im;
+            ImageBehavior.SetAnimatedSource(viewingImage, im);
         }
             
         else

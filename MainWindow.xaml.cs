@@ -10,6 +10,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using WMPLib;
+using static System.Net.Mime.MediaTypeNames;
+using WpfAnimatedGif;
 using Color = System.Windows.Media.Color;
 
 namespace globulator;
@@ -149,7 +151,7 @@ public partial class MainWindow : Window
                     im.UriSource = new Uri(path);
                     im.EndInit();
 
-                    pictureBox.Source = im;
+                    ImageBehavior.SetAnimatedSource(pictureBox, im);
                 }
                     
                 else
@@ -177,7 +179,7 @@ public partial class MainWindow : Window
 
                 FlowDocument textDoc = new();
 
-                Run textRun = new("No files in selected directory");
+                Run textRun = new("No files in selected directory.");
 
                 Paragraph text = new();
                 text.Inlines.Add(textRun);
@@ -192,6 +194,14 @@ public partial class MainWindow : Window
     private void viewingBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         sendButton.IsDefault = false;
+    }
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+
+        // Begin dragging the window
+        this.DragMove();
     }
 
     private void consoleOutput_TextChanged(object sender, TextChangedEventArgs e)

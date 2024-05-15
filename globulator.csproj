@@ -8,10 +8,15 @@
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>globulator_icon7.ico</ApplicationIcon>
+    <AssemblyName>PULSaTE</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="029-3183061857.gif" />
+    <None Remove="4749069-2004103618.jpg" />
+    <None Remove="bg.png" />
     <None Remove="globulator_icon7.png" />
+    <None Remove="synthwave_neon_sunset_palm_trees_car_4k_5k_hd_vaporwave-2560x1440-438070080.jpg" />
     <None Remove="test.png" />
   </ItemGroup>
 
@@ -51,10 +56,15 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="029-3183061857.gif" />
+    <Resource Include="4749069-2004103618.jpg" />
+    <Resource Include="bg.png" />
     <Resource Include="globulator_icon7.png" />
+    <Resource Include="synthwave_neon_sunset_palm_trees_car_4k_5k_hd_vaporwave-2560x1440-438070080.jpg" />
     <Resource Include="test.png" />
   </ItemGroup>
 

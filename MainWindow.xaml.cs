@@ -15,6 +15,7 @@ using WpfAnimatedGif;
 using Color = System.Windows.Media.Color;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace globulator;
 
@@ -125,7 +126,7 @@ public partial class MainWindow : Window
     {
         TextRange tr = new(viewingBox.Document.ContentEnd, viewingBox.Document.ContentEnd)
         {
-            Text = Regex.Replace(text.Item1, @" {4,}|[ \t]*\t[ \t]*", "\t")
+            Text = text.Item1.Replace('\n', ' ')
         };
 
         try
@@ -182,14 +183,11 @@ public partial class MainWindow : Window
 
                     if (path.EndsWith("json"))
                     {
-                        (string, Color)[] highlightedJSON = SyntaxHighlighter.HighlightJSONString(fileText);
+                        viewingBox.Document.Blocks.Clear();
+                        List<(string, Color)> highlightedJSON = SyntaxHighlighter.HighlightJSONString(fileText);
 
                         foreach ((string, Color) highlightedText in highlightedJSON)
-                        {
-                            AppendTextToViewingBox(highlightedText);
-                            // viewingBox.AppendText("\r");
-                        }
-                            
+                            AppendTextToViewingBox(highlightedText);  
                     }
                     else
                     {
@@ -234,7 +232,7 @@ public partial class MainWindow : Window
         base.OnMouseLeftButtonDown(e);
 
         // Begin dragging the window
-        this.DragMove();
+        DragMove();
     }
 
     private void consoleOutput_TextChanged(object sender, TextChangedEventArgs e)

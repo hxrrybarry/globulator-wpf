@@ -13,12 +13,18 @@ using System.Windows.Documents;
 using Color = System.Windows.Media.Color;
 using WpfAnimatedGif;
 using System.Windows.Media;
+using WMPLib;
+using System.IO.Packaging;
+using System.Numerics;
+using System.Diagnostics.Metrics;
+using VideoLibrary;
+using MediaToolkit;
 
 namespace globulator;
 
 public class CommandConsole()
 {
-    private const string VERSION = "Poly Use Linked Storage and Text Editor version: b1.1.1";
+    private const string VERSION = "Poly Use Linked Storage and Text Editor version: v1.3.1-beta";
 
     readonly static JObject json = JObject.Parse(File.ReadAllText("config.json"));
 
@@ -31,6 +37,10 @@ public class CommandConsole()
     public string CurrentGlobName = "";
     private string CurrentGlobPath = "";
     private List<FileWrapper> CurrentGlobContents = new();
+
+    private readonly WindowsMediaPlayer MusicPlayer = new();
+    private bool IsPlaylistPaused = false;
+    private string CurrentPlaylistName = "";
 
     #region Compression
     // nicked a good deal of this
@@ -82,7 +92,7 @@ public class CommandConsole()
     }
     #endregion
 
-    public (string, Color) ProcessCommand(string command, (string, string) fileDetails)
+    public async Task<(string, Color)> ProcessCommand(string command, (string, string) fileDetails)
     {
         string[] args = command.Split(' ');
 
@@ -106,10 +116,69 @@ public class CommandConsole()
                 "commit" => WriteToSelectedFile(fileDetails),
                 "togglemute" => ToggleMute(),
                 "setbg" => SetBackgroundImage(args[1..]),
+                "play" => PlayPlaylist(args[1], args[2], args[3..]),
+                "togglepause" => TogglePause(),
+                "getaudio" => GetCurrentPlaylistMedia(),
+                "skip" => PlaySongAtIndex(args[1..]),
+                "prev" => PreviousSongInPlaylist(),
+                "vol" => SetVolume(args[1]),
+                "download" => await DownloadVideoFromYouTube(args[1], args[2]),
                 _ => CommandNotFoundError(args[0])
             };
         } catch (IndexOutOfRangeException) {
             return ("There was an error parsing command arguments.", Color.FromRgb(205, 0, 26));
+        }
+    }
+
+    // since the usual parsing for commands works by splitting on a space, we have to pass in an array of the rest of the arguments
+    private static (string, Color) HelpCommand(string[] command)
+    {
+        Dictionary<string, string> commands = new()
+        {
+            { "echo", " <message> - Repeats <message> in terminal." },
+            { "login", " <password> - Sets current glob encryption key to <password>." },
+            { "help", " <command = *> - Displays help on <command>, by default will display all commands." },
+            { "cd", " <directory> - Changes current directory scope to <directory>. <directory = '^'> retrieves parent directory." },
+            { "ls", " <type> - Lists all files / directories in current directory depending on the value of <type>. <type = -f | -d | -g> where -f is all files, -d is all directories and -g is all globs. Use F11 and F12 to scroll through each file." },
+            { "mk", " <type> <name> - Creates file of <type> with name <name>. <type = -f | -g> where -f is for a file and -g is for a glob." },
+            { "dl", " <file> - Deletes file at <file>." },
+            { "globulate", " <file> <copy? = -m | -c> <glob> - Moves <file> to <glob>. <copy = -c> indicates to copy the file, and if <glob> is left blank, the currently selected glob is assumed." },
+            { "extract", " <file ?= *> <copy? = -m | -c> <glob> - Extracts <file> from <glob>. <copy = -c> indicates to copy the file, and if <glob> is left blank, the currently selected glob is assumed. <file = *> indicates all files should be extracted." },
+            { "peek", " <glob> - Views contents of <glob>, and sets it to the currently selected glob. If <glob> is left blank, the currently selected glob is assumed."},
+            { "def", " - Sets current directory to the default." },
+            { "open", " <file> - Opens <file> in default application." },
+            { "ver", " - Displays current software version." },
+            { "sl", " <file> - Selects <file> for viewing / editing on the side. Use F11 and F12 to scroll through each file." },
+            { "commit", " - Writes changes from selected file." },
+            { "togglemute", " - Toggles mute." },
+            { "setbg", " <file> - Sets current background image to <file>." },
+            { "play", " <loop? = t | f> <shuffle? = t | f> <playlistDirectory> - Plays all audio files in <playlistDirectory>." },
+            { "togglepause", " - Toggles pause for current audio." },
+            { "getaudio", " - Displays all audio in current playlist." },
+            { "skip", " <index> - Skips to <index> within playlist. If left blank, skips to next audio file." },
+            { "prev", " - Plays previous audio file in playlist." },
+            { "vol", " <volume> - Sets volume to <volume> / 100." },
+            { "download", " <link> - Downloads <link> from YouTube." }
+        };
+
+        // checks if user is requesting help for specific command
+        string response = "";
+        if (command.Length == 0)    // the length being zero indicates the user has inputted no argument, and should therefore display everything
+        {
+            foreach (KeyValuePair<string, string> kvPair in commands)
+                response += $"\n> {kvPair.Key}{kvPair.Value}";
+
+            return (response + '\n', Color.FromRgb(255, 228, 225));
+        }
+
+        try
+        {
+            response = commands[command[0]];
+            return (command[0] + response, Color.FromRgb(255, 228, 225));
+        }
+        catch (KeyNotFoundException)
+        {
+            return CommandNotFoundError(command[0]);
         }
     }
 
@@ -119,8 +188,133 @@ public class CommandConsole()
         string output = string.Join(' ', message);
         return (output, Color.FromRgb(255, 228, 225));
     }
-
     
+    private async Task<(string, Color)> DownloadVideoFromYouTube(string link, string onlyAudio)
+    {
+        var youTube = YouTube.Default; // starting point for YouTube actions
+        var video = youTube.GetVideo(link); // gets a Video object with info about the video
+
+        byte[] videoBytes = await video.GetBytesAsync();
+
+        string filePath = CurrentDirectory + '\\' + video.FullName;
+
+        File.WriteAllBytes(filePath, videoBytes);
+
+        if (onlyAudio == "true" || onlyAudio == "t") 
+        {
+            var inputFile = new MediaToolkit.Model.MediaFile { Filename = filePath };
+            var outputFile = new MediaToolkit.Model.MediaFile { Filename = $"{filePath.Replace(".mp4", "")}.mp3" };
+
+            using var engine = new Engine();
+            engine.GetMetadata(inputFile);
+
+            engine.Convert(inputFile, outputFile);
+
+            File.Delete(filePath);
+        }
+
+        return ($"Successfully downloaded video '{video.FullName}'.", Color.FromRgb(0, 155, 119));
+    }
+
+    private (string, Color) SetVolume(string volume)
+    {
+        if (!int.TryParse(volume, out int vol))
+            return ($"Error! Volume '{volume}' is invalid!", Color.FromRgb(205, 0, 26));
+
+        MusicPlayer.settings.volume = vol;
+        return ($"Set volume to {volume} / 100", Color.FromRgb(255, 228, 225));
+    }
+    
+    private (string, Color) GetCurrentPlaylistMedia()
+    {
+        string result = $"\nPlaylist '{CurrentPlaylistName}'\n";
+
+        for (int i = 0; i < MusicPlayer.currentPlaylist.count; i++)
+        {
+            IWMPMedia audioAtIndex = MusicPlayer.currentPlaylist.Item[i];   
+            
+            result += $"{i}: " + audioAtIndex.name.ToString() + $" [{audioAtIndex.durationString}]";
+
+            if (MusicPlayer.currentMedia.isIdentical[audioAtIndex])
+                result += " <--";
+
+            result += '\r';
+        }
+
+        return (result, Color.FromRgb(255, 228, 225));
+    }
+
+    private (string, Color) PlaySongAtIndex(string[] index)
+    {
+        if (index.Length == 0)
+            MusicPlayer.controls.next();
+
+        else
+        {
+            string requestedIndex = index[0];
+
+            IWMPMedia media;
+            if (int.TryParse(requestedIndex, out int i))
+                media = MusicPlayer.currentPlaylist.get_Item(i);
+            else
+                return ($"Error! Index '{requestedIndex}' cannot be parsed!", Color.FromRgb(205, 0, 26));
+
+            MusicPlayer.controls.playItem(media);
+        }
+
+        return ("Playing song at requested index.", Color.FromRgb(255, 228, 225));
+    }
+
+    private (string, Color) PreviousSongInPlaylist()
+    {
+        MusicPlayer.controls.previous();
+        return ("Playing previous song.", Color.FromRgb(255, 228, 225));
+    }
+
+    private (string, Color) PlayPlaylist(string isLooped, string isShuffled, string[] path)
+    {
+        if (isLooped == "true" || isLooped == "t")
+            MusicPlayer.settings.setMode("isLooped", true);
+        else if (isLooped == "false" || isLooped == "f")
+            MusicPlayer.settings.setMode("isLooped", false);
+        else
+            return ($"Error, invalid loop setting '{isLooped}'.", Color.FromRgb(205, 0, 26));
+
+        string? stringPath = string.Join(' ', path);
+        stringPath = ParseDirectoryRequest(stringPath);
+
+        if (stringPath is null)
+            return ($"Playlist '{stringPath}' does not exist!", Color.FromRgb(205, 0, 26));
+
+        MusicPlayer.currentPlaylist.clear();
+        MusicPlayer.controls.stop();
+
+        CurrentPlaylistName = new DirectoryInfo(stringPath).Name;
+
+        List<string> songs = [.. Directory.GetFiles(stringPath)];
+
+        if (isShuffled == "true" || isShuffled == "t")
+            songs = (List<string>)songs.Shuffle();
+
+        foreach (string song in songs)
+            MusicPlayer.currentPlaylist.appendItem(MusicPlayer.newMedia(song));
+
+        MusicPlayer.controls.play();
+
+        return ($"Playing playlist at '{stringPath}'.", Color.FromRgb(0, 155, 119));
+    }
+
+    private (string, Color) TogglePause()
+    {
+        IsPlaylistPaused ^= true;
+
+        if (IsPlaylistPaused)
+            MusicPlayer.controls.pause();
+        else
+            MusicPlayer.controls.play();
+
+        return ("Toggled pause on current playlist.", Color.FromRgb(0, 155, 119));
+    }
 
     private (string, Color) SetBackgroundImage(string[] path)
     {
@@ -168,48 +362,6 @@ public class CommandConsole()
     {
         Password = password;
         return ("Login successful.", Color.FromRgb(0, 155, 119));
-    }
-
-    // since the usual parsing for commands works by splitting on a space, we have to pass in an array of the rest of the arguments
-    private static (string, Color) HelpCommand(string[] command)
-    {
-        Dictionary<string, string> commands = new()
-        {
-            { "echo", " <message> - Repeats <message> in terminal." },
-            { "login", " <password> - Sets current glob encryption key to <password>." },
-            { "help", " <command = *> - Displays help on <command>, by default will display all commands." },
-            { "cd", " <directory> - Changes current directory scope to <directory>. <directory = '^'> retrieves parent directory." },
-            { "ls", " <type> - Lists all files / directories in current directory depending on the value of <type>. <type = -f | -d | -g> where -f is all files, -d is all directories and -g is all globs. Use F11 and F12 to scroll through each file." },
-            { "mk", " <type> <name> - Creates file of <type> with name <name>. <type = -f | -g> where -f is for a file and -g is for a glob." },
-            { "dl", " <file> - Deletes file at <file>." },
-            { "globulate", " <file> <copy? = -m | -c> <glob> - Moves <file> to <glob>. <copy = -c> indicates to copy the file, and if <glob> is left blank, the currently selected glob is assumed." },
-            { "extract", " <file ?= *> <copy? = -m | -c> <glob> - Extracts <file> from <glob>. <copy = -c> indicates to copy the file, and if <glob> is left blank, the currently selected glob is assumed. <file = *> indicates all files should be extracted." },
-            { "peek", " <glob> - Views contents of <glob>, and sets it to the currently selected glob. If <glob> is left blank, the currently selected glob is assumed."},
-            { "def", " - Sets current directory to the default." },
-            { "open", " <file> - Opens <file> in default application." },
-            { "ver", " - Displays current software version." },
-            { "sl", " <file> - Selects <file> for viewing / editing on the side. Use F11 and F12 to scroll through each file." },
-            { "commit", " - Writes changes from selected file." },
-            { "togglemute", " - Toggles mute." },
-            { "setbg", " <file> - Sets current background image to <file>." }
-        };
-
-        // checks if user is requesting help for specific command
-        string response = "";
-        if (command.Length == 0)    // the length being zero indicates the user has inputted no argument, and should therefore display everything
-        {
-            foreach (KeyValuePair<string, string> kvPair in commands)
-                response += $"\n> {kvPair.Key}{kvPair.Value}";
-
-            return (response + '\n', Color.FromRgb(255, 228, 225));
-        }
-
-        try {
-            response = commands[command[0]];
-            return (command[0] + response, Color.FromRgb(255, 228, 225));
-        } catch (KeyNotFoundException) {
-            return CommandNotFoundError(command[0]);
-        }
     }
 
     #region Glob
@@ -318,7 +470,7 @@ public class CommandConsole()
             {               
                 if (isCopy == "-m")
                 {
-                    // we have to define an amount here and do a manual loop because CurrentGlobContents.Count may change as files are extracted
+                    // we have to define an amount here and do a manual isLooped because CurrentGlobContents.Count may change as files are extracted
                     int count = CurrentGlobContents.Count;
                     for (int _ = 0; _ < count; _++)
                         ExtractSingleFile(CurrentGlobContents[0], isCopy, globPath);
@@ -392,7 +544,10 @@ public class CommandConsole()
     #region Files
     private (string, Color) OpenFile(string path)
     {
-        string file = ParseDirectoryRequest(path);
+        string? file = ParseDirectoryRequest(path);
+
+        if (file is null)
+            return ($"File '{path}' does not exist!", Color.FromRgb(205, 0, 26));
 
         using Process p = new();
 

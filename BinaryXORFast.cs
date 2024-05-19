@@ -4,7 +4,7 @@
 
 public static class BinOps
 {
-    private const int bitsinbyte = 8;
+    private const int BITS_IN_BYTE = 8;
     private static readonly int parallelDegree;
     private static readonly int uintSize;
     private static readonly int bits_in_uint;
@@ -12,7 +12,7 @@ public static class BinOps
     {
         parallelDegree = Environment.ProcessorCount;
         uintSize = sizeof(uint) / sizeof(byte); // really paranoid, uh ? // lmao not sure what he meant by this - Harry
-        bits_in_uint = uintSize * bitsinbyte;
+        bits_in_uint = uintSize * BITS_IN_BYTE;
     }
 
     public static byte[] Bin_Xor(this byte[] ba, byte[] bt)

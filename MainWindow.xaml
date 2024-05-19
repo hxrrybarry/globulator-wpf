@@ -13,7 +13,7 @@
                 <VisualBrush.Visual>
                     <Image
                         Stretch="UniformToFill"
-                        gif:ImageBehavior.AnimatedSource="C:\Users\harib\source\repos\globulator\bin\Debug\net8.0-windows\bg\background.gif"
+                        gif:ImageBehavior.AnimatedSource="background.gif"
                         gif:ImageBehavior.AutoStart="True"
                         gif:ImageBehavior.RepeatBehavior="1"/>
                 </VisualBrush.Visual>
@@ -32,7 +32,7 @@
         </Grid.ColumnDefinitions>
         <Image x:Name="pictureBox" Margin="13,5,11,0" Visibility="Visible" Grid.Column="3" Grid.Row="1"/>
         <TextBox x:Name="commandBox" Margin="0,7,7,15" TextWrapping="Wrap" Foreground="MistyRose" Background="#B24B4959" AutomationProperties.HelpText="Command.." TextChanged="TextBox_TextChanged" Grid.Row="2" Grid.Column="1" MinHeight="21" BorderBrush="#FFABADB3"/>
-        <Button x:Name="sendButton" Content="Send &gt;&gt;" Click="sendButton_Click" Margin="1,7,5,15" Grid.Row="2" RenderTransformOrigin="-0.004,0.51" Grid.Column="2" MinHeight="21" BorderBrush="#FF707070" Background="#B2DDDDDD"/>
+        <Button x:Name="sendButton" Content="Send &gt;&gt;" Click="sendButton_Click" Margin="1,7,5,15" Grid.Row="2" RenderTransformOrigin="-0.004,0.51" Grid.Column="2" MinHeight="21" BorderBrush="#FF707070" Background="#B21C1B22" Foreground="MistyRose"/>
         <RichTextBox x:Name="consoleOutput" MinWidth="0" Background="#B21C1B22" Foreground="MistyRose" IsReadOnly="True" FontFamily="Cascadia Code" TextChanged="consoleOutput_TextChanged" Margin="0,3,3,0" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" BorderBrush="#FFABADB3">
             <RichTextBox.RenderTransform>
                 <MatrixTransform/>

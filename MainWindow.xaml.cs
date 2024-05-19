@@ -1,21 +1,14 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Runtime.InteropServices;
+﻿using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using WMPLib;
-using static System.Net.Mime.MediaTypeNames;
 using WpfAnimatedGif;
 using Color = System.Windows.Media.Color;
-using System.Linq;
-using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 
 namespace globulator;
 
@@ -70,7 +63,7 @@ public partial class MainWindow : Window
         sendButton.IsDefault = true;
     }
 
-    private void sendButton_Click(object sender, RoutedEventArgs e)
+    private async void sendButton_Click(object sender, RoutedEventArgs e)
     {
         TextRange viewingBoxText = new(
             viewingBox.Document.ContentStart,
@@ -81,7 +74,20 @@ public partial class MainWindow : Window
         AppendTextToConsole(($"{console.CurrentDirectory}; ", Color.FromRgb(255, 239, 0)));
         AppendTextToConsole(($"{console.CurrentGlobName}; ", Color.FromRgb(255, 164, 0)));
         AppendTextToConsole(($"<< {commandBox.Text}", Color.FromRgb(0, 188, 227)));
-        (string, Color) response = console.ProcessCommand(commandBox.Text, (viewingBoxText.Text, viewedFilePath.Content.ToString()));
+
+        string command = commandBox.Text;
+
+        // lazy way of accomplishing this
+        if (command.StartsWith("download"))
+        {
+            AppendTextToConsole(($"\r{DateTime.Now:HH:mm:ss}; ", Color.FromRgb(213, 63, 119)));
+            AppendTextToConsole(($"{console.CurrentDirectory}; ", Color.FromRgb(255, 239, 0)));
+            AppendTextToConsole(($"{console.CurrentGlobName}; ", Color.FromRgb(255, 164, 0)));
+            AppendTextToConsole(($">> Downloading video..\r", Color.FromRgb(255, 228, 225)));
+            commandBox.Clear();
+        }
+
+        (string, Color) response = await console.ProcessCommand(command, (viewingBoxText.Text, viewedFilePath.Content.ToString()));
         commandBox.Clear();
 
         string responseText = response.Item1;
@@ -107,6 +113,7 @@ public partial class MainWindow : Window
         console.AllFilesInCurrentPath = Directory.GetFiles(console.CurrentDirectory).Where(c => !c.EndsWith("glob")).ToArray();
     }
 
+
     public void AppendTextToConsole((string, Color) text)
     {
         TextRange tr = new(consoleOutput.Document.ContentEnd, consoleOutput.Document.ContentEnd)
@@ -114,8 +121,7 @@ public partial class MainWindow : Window
             Text = text.Item1
         };
 
-        try
-        {
+        try {
             tr.ApplyPropertyValue(TextElement.ForegroundProperty,
                 new SolidColorBrush(text.Item2));
         }
@@ -129,8 +135,7 @@ public partial class MainWindow : Window
             Text = text.Item1.Replace('\n', ' ')
         };
 
-        try
-        {
+        try {
             tr.ApplyPropertyValue(TextElement.ForegroundProperty,
                 new SolidColorBrush(text.Item2));
         }
